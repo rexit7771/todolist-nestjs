@@ -1,6 +1,13 @@
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class UpdateTaskDto {
   @IsBoolean({ message: 'completed harus berupa boolean' })
-  completed!: boolean;
+  @IsOptional()
+  @IsNotEmpty()
+  completed?: boolean;
+
+  @IsString({ message: 'title harus string' })
+  @IsOptional()
+  @IsNotEmpty()
+  title?: string;
 }

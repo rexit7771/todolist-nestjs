@@ -1,0 +1,22 @@
+meta {
+  name: Add Task
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{LOCAL_URL}}/tasks
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "title":"Belajar nestjs mandiri"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

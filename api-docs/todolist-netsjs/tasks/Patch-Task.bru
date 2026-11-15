@@ -1,0 +1,21 @@
+meta {
+  name: Patch Task
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{LOCAL_URL}}/tasks/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 1
+}
+
+body:json {
+  {
+    "title": "Horeee"
+  }
+}
