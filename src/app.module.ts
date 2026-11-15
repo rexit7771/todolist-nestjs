@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
+import { FeedbackModule } from './modules/feedback/feedback.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { JwtModule } from '@nestjs/jwt';
     TasksModule,
     AuthModule,
     JwtModule,
+    FeedbackModule,
   ],
 })
 export class AppModule {}
