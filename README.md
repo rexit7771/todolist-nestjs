@@ -1,6 +1,6 @@
 # todolist-nestjs
 
-A small todo-list REST API that I built to learn [NestJS](https://nestjs.com). It covers the core building blocks: modules, dependency injection, controllers/services, DTO validation, guards, JWT authentication, and Prisma as the ORM.
+A small todo-list REST API (plus a feedback module) that I built to learn [NestJS](https://nestjs.com). It covers the core building blocks: modules, dependency injection, controllers/services, DTO validation, guards, JWT authentication, and Prisma as the ORM.
 
 > This is a learning project, not production-ready code.
 
@@ -38,6 +38,10 @@ npx prisma generate --config prisma7.config.ts   # generate the Prisma client
 npx prisma db push  --config prisma7.config.ts   # create/sync tables in dev.db
 ```
 
+Run `prisma generate` again every time you change `prisma/schema.prisma`.
+
+> **VS Code tip:** if ESLint shows `Unsafe call of a type that could not be resolved` on `this.prismaService.<model>` right after you add a model, the ESLint server is still using its old cached types. Run **ESLint: Restart ESLint Server** from the Command Palette.
+
 ### 4. Run the app
 
 ```bash
@@ -57,8 +61,15 @@ The API runs at `http://localhost:3001` (or whatever `PORT` you set; defaults to
 | GET | `/tasks` | Bearer | – |
 | GET | `/tasks/:id` | Bearer | – |
 | POST | `/tasks` | Bearer | `{ "title": "Belajar NestJS" }` |
-| PATCH | `/tasks/:id` | Bearer | `{ "completed": true }` |
+| PATCH | `/tasks/:id` | Bearer | `{ "completed": true, "title": "Belanja" }` (both optional) |
 | DELETE | `/tasks/:id` | Bearer | – |
+| GET | `/feedback` | Bearer | – |
+| GET | `/feedback/:id` | Bearer | – |
+| POST | `/feedback` | Bearer | `{ "name": "Budi", "message": "Mantap", "rating": 5 }` |
+| PUT | `/feedback/:id` | Bearer | `{ "name": "Budi", "message": "Mantap", "rating": 4 }` (all fields required) |
+| DELETE | `/feedback/:id` | Bearer | – |
+
+`rating` must be an integer from 1 to 5.
 
 Protected routes need the header `Authorization: Bearer <token>` (use the token from `/auth/login`).
 
@@ -85,9 +96,11 @@ src/
     ├── auth/                 # register, login, JwtAuthGuard
     │   ├── dto/
     │   └── guards/
-    └── tasks/                # task CRUD (protected)
+    ├── tasks/                # task CRUD (protected)
+    │   └── dto/
+    └── feedback/             # feedback CRUD (protected)
         └── dto/
-prisma/schema.prisma          # database models (User, Task)
+prisma/schema.prisma          # database models (User, Task, Feedback)
 api-docs/                     # Bruno API collection
 ```
 
@@ -118,14 +131,17 @@ Each feature module follows a **Controller → Service → Repository** pattern:
 - [x] Password hashing with bcrypt
 - [x] JWT auth with a custom `CanActivate` guard
 - [x] Async module config with `ConfigService`
+- [x] Reusing a guard from another module (`AuthModule` exports → `FeedbackModule` imports)
+- [x] Allow editing task titles
+- [x] Unit testing a service with a mocked repository (`useValue` + `jest.fn()`)
 
 ## Next steps / TODO
 
 - [ ] Link tasks to users (each user only sees their own tasks)
 - [ ] Hide the password hash in the register response
 - [ ] `@CurrentUser()` custom decorator
-- [ ] Allow editing task titles (`PartialType` DTO)
-- [ ] Write real unit tests with mocked providers
+- [ ] Refactor update DTOs with `PartialType`
+- [ ] Write unit tests for the remaining services and controllers (auth, feedback)
 - [ ] Use Prisma migrations instead of `db push`
 - [ ] Swagger / OpenAPI docs
 
