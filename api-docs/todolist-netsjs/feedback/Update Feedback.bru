@@ -1,0 +1,28 @@
+meta {
+  name: Update Feedback
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{LOCAL_URL}}/feedback/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 2
+}
+
+body:json {
+  {
+    "name": "Kelengkapan",
+    "message": "Fitur yang dibutuhkan cukup lengkap",
+    "rating": 5
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

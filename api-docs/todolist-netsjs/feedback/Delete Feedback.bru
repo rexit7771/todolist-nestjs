@@ -1,0 +1,20 @@
+meta {
+  name: Delete Feedback
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{LOCAL_URL}}/feedback/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 2
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
