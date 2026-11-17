@@ -175,6 +175,7 @@ Setiap module fitur mengikuti pola **Controller → Service → Repository**:
 - [ ] Tulis unit test untuk service dan controller lainnya (auth, feedback)
 - [ ] Pakai Prisma migrations, bukan `db push`
 - [ ] Dokumentasi Swagger / OpenAPI
+- [ ] Error handler global seperti `app.use((err, req, res, next) => ...)` di Express, versi Nest-nya adalah **exception filter** (`@Catch()` + `ExceptionFilter`, didaftarkan dengan `app.useGlobalFilters()` atau `APP_FILTER`) untuk menyeragamkan format response error dan mencatat error ke winston
 
 ## Referensi
 
