@@ -7,11 +7,15 @@ meta {
 get {
   url: {{LOCAL_URL}}/feedback/:id
   body: none
-  auth: inherit
+  auth: bearer
 }
 
 params:path {
   id: 2
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJ0ZXN0QG1haWwuY29tIiwiaWF0IjoxNzk0OTE2NDM2LCJleHAiOjE3OTQ5MjE0MzZ9.vwHHWbpUnl0EJIb7j8cbrDHl4MuR8yULwzuKYvsgP9U
 }
 
 settings {
