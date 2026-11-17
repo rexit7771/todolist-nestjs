@@ -8,6 +8,7 @@ A todo-list REST API built **to learn NestJS**. It's not production code. When y
 - Prisma 7 with the new `prisma-client` generator and the SQLite **driver adapter** (`@prisma/adapter-better-sqlite3`)
 - Auth: `@nestjs/jwt` + `bcrypt`. There's no Passport; a hand-written guard handles auth.
 - Validation: `class-validator` / `class-transformer` through a global `ValidationPipe`
+- Logging: `winston` + `winston-daily-rotate-file` through `nest-winston`, which replaces Nest's built-in logger app-wide
 - Jest for unit tests, `supertest` for e2e tests
 - API requests live in a **Bruno** collection in [api-docs/todolist-netsjs/](api-docs/todolist-netsjs/). The Postman CLI is also installed.
 
@@ -44,9 +45,11 @@ Run `prisma generate` after a fresh clone and after every edit to `schema.prisma
 
 ```
 src/
-  main.ts                 bootstrap + global ValidationPipe
-  app.module.ts           ConfigModule (global), TasksModule, AuthModule, FeedbackModule
+  main.ts                 bootstrap, winston logger, global ValidationPipe
+  app.module.ts           ConfigModule (global), TasksModule, AuthModule, FeedbackModule; applies HttpLoggerMiddleware to all routes
+  common/                 httpLogger.middleware.ts (logs every request)
   configs/prisma/         PrismaModule / PrismaService (extends PrismaClient, connects on init)
+  configs/logger/         winston.config.ts (winston LoggerOptions, not a Nest module)
   modules/
     auth/                 register/login, JwtAuthGuard (exported for other modules)
     tasks/                CRUD, protected by JwtAuthGuard
@@ -57,6 +60,19 @@ Each feature module uses a **Controller → Service → Repo** layering:
 - **Controller**: routing, param parsing (`ParseIntPipe`), guards. No business logic.
 - **Service**: business rules and HTTP exceptions (`NotFoundException`, `ConflictException`, …).
 - **Repo** (`*.repo.ts`, an `@Injectable` class): the only layer that touches `PrismaService`.
+
+### Logging
+
+- `main.ts` passes `WinstonModule.createLogger(winstonConfig)` to `NestFactory.create`. This swaps Nest's logger **before** modules are built, so startup logs (`InstanceLoader`, `RouterExplorer`) and the 500 errors from `ExceptionsHandler` also go through winston. There's no `WinstonModule.forRoot()` and no `WINSTON_MODULE_PROVIDER` injection.
+- **In app code, use Nest's `Logger`, not winston directly:** `private readonly logger = new Logger(MyService.name)`. The class name becomes the `context` that appears in the log line. Unit tests don't need to mock it.
+- Transports in [src/configs/logger/winston.config.ts](src/configs/logger/winston.config.ts):
+  - Console: level `debug`, colorized
+  - Daily rotate file: level `info`, at `logs/<Month>/DD-MM-YYYY.log` (e.g. `logs/November/17-11-2026.log`), kept 60 days. `logs/` is gitignored.
+  - Both use `handleExceptions` / `handleRejections`.
+- Line format: `[DD-MM-YYYY, HH.mm.ss] level [Context]: message`, followed by the stack trace on the next line when there is one.
+- In the `printf` callback, every field except `level` is typed `unknown`. Narrow each one with `typeof` or `String()`. Don't cast with `as`. Otherwise the type-aware ESLint rules (`restrict-template-expressions`, `no-base-to-string`) fail.
+- nest-winston passes `stack` as an **array** (`[trace]`), while winston's `format.errors` passes it as a string. `normalizeStack()` handles both, but it keeps only string entries. So call `logger.error(msg, err.stack)`, not `logger.error(msg, err)`, or the trace is dropped.
+- `HttpLoggerMiddleware` (`Logger('HTTP')`) logs `METHOD url status - Nms` on `res.on('finish')`. It uses `error` for 5xx, `warn` for 4xx, and `log` for everything else. It's registered through `AppModule.configure()` (`NestModule`), not `app.use()`.
 
 Keep new features in this shape: `src/modules/<name>/` holding `<name>.module.ts`, `.controller.ts`, `.service.ts`, `.repo.ts`, and `dto/`. Import `PrismaModule` into the feature module. It isn't global.
 
@@ -112,3 +128,4 @@ These are useful next exercises. Don't treat them as surprises:
 - In `TasksController`, `PATCH`/`DELETE` declare `id: string` even though `ParseIntPipe` returns a number, and only `GET :id` checks `id > 0`.
 - `UpdateTaskDto` hand-writes optional fields. `PartialType(CreateTaskDto)` from `@nestjs/mapped-types` is the idiomatic way to do this.
 - There's no migrations history. Start using `prisma migrate dev` once the schema changes matter.
+- **Logging nits:** the bootstrap `.catch` in `main.ts` uses the context `'Bootrstrap'` (a typo), and it passes `err` instead of `err.stack`, so the startup stack trace is dropped (see Logging above). `FeedbackService` logs "not found" at `error` level. A 404 is an expected client error, so `warn` fits better, and the HTTP middleware already logs it as `warn` anyway.
