@@ -124,7 +124,6 @@ These are useful next exercises. Don't treat them as surprises:
 - **Tasks aren't linked to users.** `Task` has no `userId`, so every authenticated user sees every task. `request.user` is set but never read. A natural next step is a `@CurrentUser()` param decorator plus a `User`→`Task` relation.
 - **Register leaks the password hash.** The response should omit it with a Prisma `select`/`omit`, a response DTO, or `ClassSerializerInterceptor`.
 - **Unit tests are mostly scaffolds.** Only `tasks.service.spec.ts` is real. It mocks `TaskRepo` with `{ provide: TaskRepo, useValue: … }` and is the pattern to copy. The other specs, including feedback's, are untouched Nest CLI scaffolds with no mocks for `FeedbackRepo`, `AuthRepo`, `JwtService`, or `PrismaService`, so they fail on DI resolution. `test/app.e2e-spec.ts` expects `GET /` → "Hello World!".
-- **`FeedbackModule` lists `PrismaModule` in `providers`.** A module belongs only in `imports`, where it already is. Remove it from `providers`.
 - `UpdateFeedback` (not named `UpdateFeedbackDto` like the other DTOs) reuses the message `'name wajib dikirim'` on the `message` field. `FeedbackDto` is unused now that the repo uses Prisma.
 - **`app.controller.ts` and `app.service.ts` are leftover scaffold.** `AppModule` doesn't register them.
 - `AppModule` imports a bare `JwtModule` that does nothing, because `AuthModule` already configures and exports it.

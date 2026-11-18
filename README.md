@@ -163,6 +163,8 @@ Setiap module fitur mengikuti pola **Controller → Service → Repository**:
 - [x] Autentikasi JWT dengan guard `CanActivate` buatan sendiri
 - [x] Konfigurasi module secara async dengan `ConfigService`
 - [x] Memakai ulang guard dari module lain (`AuthModule` meng-export → `FeedbackModule` meng-import)
+- [x] Perbedaan `imports` / `providers` / `exports` di `@Module` (module masuk ke `imports`, bukan `providers`; provider bersifat privat sampai di-export)
+- [x] Trade-off `@Global()`: lebih ringkas, tapi dependensi module jadi tidak terlihat di `imports` dan module lebih sulit di-test/dipakai ulang secara terpisah
 - [x] Mengizinkan edit judul task
 - [x] Unit test service dengan repository yang di-mock (`useValue` + `jest.fn()`)
 - [x] Mengganti logger Nest dengan winston (`nest-winston`, file yang dirotasi harian)
@@ -178,6 +180,14 @@ Setiap module fitur mengikuti pola **Controller → Service → Repository**:
 - [ ] Pakai Prisma migrations, bukan `db push`
 - [ ] Dokumentasi Swagger / OpenAPI
 - [ ] Error handler global seperti `app.use((err, req, res, next) => ...)` di Express, versi Nest-nya adalah **exception filter** (`@Catch()` + `ExceptionFilter`, didaftarkan dengan `app.useGlobalFilters()` atau `APP_FILTER`) untuk menyeragamkan format response error dan mencatat error ke winston
+
+### Eksplorasi lanjutan: module & dependency injection
+
+- [ ] **Dynamic module**: buat sendiri modul dengan `register()` / `forRoot()` / `registerAsync()` (seperti `JwtModule.registerAsync` yang sudah dipakai), misalnya `PrismaModule.forRoot({ url })`, untuk memahami `DynamicModule`
+- [ ] **Custom provider**: coba keempat bentuknya (`useClass`, `useValue`, `useFactory` + `inject`, `useExisting`) dan injection token non-class (`@Inject('TOKEN')`). Latihan: interface `FeedbackRepository` dengan dua implementasi (Prisma & in-memory), lalu tukar lewat module saja tanpa mengubah service
+- [ ] **Lifecycle hooks**: `onModuleInit`, `onModuleDestroy`, `onApplicationBootstrap`, `enableShutdownHooks()` untuk menutup koneksi Prisma dengan rapi. Tambahkan `Logger` di setiap hook untuk melihat urutan eksekusinya
+- [ ] **Circular dependency**: buat skenario `TasksService` ↔ `FeedbackService`, lihat error-nya, perbaiki dengan `forwardRef()`, lalu bandingkan dengan solusi yang lebih baik (pisahkan logika bersama ke modul ketiga)
+- [ ] **Injection scope** (opsional): `Scope.DEFAULT` (singleton), `REQUEST`, `TRANSIENT`, dan bagaimana scope `REQUEST` "menular" ke provider yang bergantung padanya
 
 ## Referensi
 
