@@ -27,6 +27,6 @@ async function bootstrap() {
   new Logger('Bootstrap').log(`Server listening on port ${port}`);
 }
 bootstrap().catch((err) => {
-  new Logger('Bootrstrap').error('Failed to start Server', err);
+  new Logger('Bootstrap').error('Failed to start Server', err);
   process.exit(1);
 });

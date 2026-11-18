@@ -67,6 +67,8 @@ Logger bawaan Nest diganti dengan [winston](https://github.com/winstonjs/winston
 | Konsol (berwarna) | `debug` ke atas | terminal |
 | File log (dirotasi harian, disimpan 60 hari) | `info` ke atas | `logs/<Bulan>/DD-MM-YYYY.log` |
 
+Log startup bawaan Nest (`[NestFactory]`, `[InstanceLoader]`, `[RoutesResolver]`, `[RouterExplorer]`, `[NestApplication]`) diturunkan ke level `debug`. Log itu tetap tampil di konsol tapi tidak masuk ke file, supaya file log tidak penuh setiap kali aplikasi restart dalam mode `start:dev`.
+
 Untuk menulis log dari kode sendiri, pakai `Logger` dari Nest (nama class akan muncul sebagai context):
 
 ```ts

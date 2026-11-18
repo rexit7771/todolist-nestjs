@@ -45,9 +45,40 @@ const lineFormat = winston.format.printf((info) => {
   return trace && !message.includes(trace) ? `${line}\n${trace}` : line;
 });
 
+// Context log internal Nest saat startup. Isinya hanya informasi wiring
+// (module dimuat, route dipetakan), jadi cukup tampil di level debug.
+const NEST_INTERNAL_CONTEXTS = new Set([
+  'NestFactory',
+  'InstanceLoader',
+  'RoutesResolver',
+  'RouterExplorer',
+  'NestApplication',
+]);
+
+// Transport memfilter level berdasarkan symbol ini, bukan `info.level`.
+// Sama dengan `LEVEL` dari package `triple-beam`.
+const LEVEL = Symbol.for('level');
+
+const demoteNestInternals = winston.format((info) => {
+  if (
+    info.level === 'info' &&
+    typeof info.context === 'string' &&
+    NEST_INTERNAL_CONTEXTS.has(info.context)
+  ) {
+    info.level = 'debug'; // yang ditampilkan di baris log
+    info[LEVEL] = 'debug'; // yang dipakai transport untuk memfilter
+  }
+  return info;
+});
+
 export const winstonConfig: winston.LoggerOptions = {
   exitOnError: true,
-  format: winston.format.errors({ stack: true }),
+  // Format di level logger berjalan SEBELUM transport memfilter level,
+  // jadi penurunan level di sini ikut menentukan log masuk ke file atau tidak.
+  format: winston.format.combine(
+    winston.format.errors({ stack: true }),
+    demoteNestInternals(),
+  ),
   transports: [
     new winston.transports.Console({
       level: 'debug',

@@ -28,6 +28,8 @@ npx prisma db push  --config prisma7.config.ts   # sync the schema to dev.db (th
 npx prisma studio   --config prisma7.config.ts
 ```
 
+**The build output is `dist/src/main.js`, not `dist/main.js`.** `PrismaService` imports from `generated/prisma`, which is outside `src/`, so `tsc` uses the project root as `rootDir`. `start:prod` therefore runs `node dist/src/main`. `prisma7.config.ts` is excluded in `tsconfig.build.json` because the CLI uses it only at dev time.
+
 Run `prisma generate` after a fresh clone and after every edit to `schema.prisma`. Without it, `src/configs/prisma/prisma.service.ts` fails to compile.
 
 **ESLint in the editor goes stale after `prisma generate`.** The VS Code ESLint server keeps its own cached TypeScript program for typed rules. After a new model is added, it can still report `@typescript-eslint/no-unsafe-call` / `no-unsafe-member-access` on `this.prismaService.<newModel>`, even though `tsc` and `npx eslint <file>` from the CLI are clean. The fix is **ESLint: Restart ESLint Server** (or Reload Window), not a code change. Check with the CLI before "fixing" these errors.
@@ -69,6 +71,7 @@ Each feature module uses a **Controller → Service → Repo** layering:
   - Console: level `debug`, colorized
   - Daily rotate file: level `info`, at `logs/<Month>/DD-MM-YYYY.log` (e.g. `logs/November/17-11-2026.log`), kept 60 days. `logs/` is gitignored.
   - Both use `handleExceptions` / `handleRejections`.
+- Nest's startup logs (`NestFactory`, `InstanceLoader`, `RoutesResolver`, `RouterExplorer`, `NestApplication`) are demoted from `info` to `debug` by the logger-level `demoteNestInternals` format. They show on the console but stay out of the log file. They're emitted on **every** boot (`start`, `start:dev`, `start:prod`), so otherwise watch mode floods the file. The format has to set **both** `info.level` (what's displayed) and `info[Symbol.for('level')]` (what transports filter on). It also has to run at the **logger** level, because logger-level formats run before transport level filtering. To demote another context, add it to `NEST_INTERNAL_CONTEXTS`.
 - Line format: `[DD-MM-YYYY, HH.mm.ss] level [Context]: message`, followed by the stack trace on the next line when there is one.
 - In the `printf` callback, every field except `level` is typed `unknown`. Narrow each one with `typeof` or `String()`. Don't cast with `as`. Otherwise the type-aware ESLint rules (`restrict-template-expressions`, `no-base-to-string`) fail.
 - nest-winston passes `stack` as an **array** (`[trace]`), while winston's `format.errors` passes it as a string. `normalizeStack()` handles both, but it keeps only string entries. So call `logger.error(msg, err.stack)`, not `logger.error(msg, err)`, or the trace is dropped.
