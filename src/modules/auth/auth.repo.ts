@@ -14,9 +14,10 @@ export class AuthRepo {
     });
   }
 
-  async create(createUser: CreateUserDto) {
+  async create(createUser: CreateUserDto, withoutPassword = true) {
     return this.prisma.user.create({
       data: createUser,
+      omit: { password: withoutPassword },
     });
   }
 }

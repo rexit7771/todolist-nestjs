@@ -173,7 +173,7 @@ Setiap module fitur mengikuti pola **Controller → Service → Repository**:
 ## Langkah selanjutnya / TODO
 
 - [ ] Hubungkan task ke user (setiap user hanya melihat task miliknya)
-- [ ] Sembunyikan hash password di response register
+- [x] Sembunyikan hash password di response register (Prisma `omit` di `AuthRepo`)
 - [ ] Custom decorator `@CurrentUser()`
 - [ ] Refactor DTO update dengan `PartialType`
 - [ ] Tulis unit test untuk service dan controller lainnya (auth, feedback)

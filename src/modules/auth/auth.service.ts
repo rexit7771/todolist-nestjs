@@ -24,10 +24,15 @@ export class AuthService {
 
     const hashedPassword = await hash(dto.password, 12);
 
-    return this.authRepo.create({
-      email: dto.email,
-      password: hashedPassword,
-    });
+    const user = await this.authRepo.create(
+      {
+        email: dto.email,
+        password: hashedPassword,
+      },
+      true,
+    );
+
+    return user;
   }
 
   async login(dto: CreateUserDto) {
