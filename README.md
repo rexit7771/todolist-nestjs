@@ -8,7 +8,7 @@ REST API todo-list sederhana (ditambah modul feedback) yang saya buat untuk bela
 
 - **NestJS 11** (Express) + TypeScript
 - **Prisma 7** + **SQLite** (melalui driver adapter `better-sqlite3`)
-- Autentikasi **JWT** (`@nestjs/jwt`) dengan hashing password memakai **bcrypt**
+- Autentikasi **JWT** (`@nestjs/jwt`) dengan hashing password memakai **bcryptjs**
 - **class-validator** untuk validasi request
 - **winston** (melalui `nest-winston`) untuk logging ke konsol dan ke file log yang dirotasi harian
 - **Jest** untuk testing, **Bruno** untuk mencoba request API
@@ -159,7 +159,7 @@ Setiap module fitur mengikuti pola **Controller → Service → Repository**:
 - [x] DTO + `ValidationPipe` (whitelist, pesan error kustom)
 - [x] Pipe bawaan (`ParseIntPipe`)
 - [x] Integrasi Prisma sebagai service yang bisa di-inject
-- [x] Hashing password dengan bcrypt
+- [x] Hashing password dengan bcryptjs
 - [x] Autentikasi JWT dengan guard `CanActivate` buatan sendiri
 - [x] Konfigurasi module secara async dengan `ConfigService`
 - [x] Memakai ulang guard dari module lain (`AuthModule` meng-export → `FeedbackModule` meng-import)

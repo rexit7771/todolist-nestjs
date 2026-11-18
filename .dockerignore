@@ -1,0 +1,32 @@
+# Dependencies & build output (dibuat ulang di dalam image)
+node_modules
+dist
+generated
+coverage
+*.tsbuildinfo
+
+# Secrets & data lokal
+.env
+.env.*
+*.db
+*.db-journal
+logs
+*.log
+
+# VCS, editor, tooling
+.git
+.gitignore
+.vscode
+.idea
+.claude
+.agents
+.windsurf
+skills-lock.json
+
+# Tidak dibutuhkan untuk build
+test
+api-docs
+*.md
+Dockerfile
+docker-compose*.yml
+.dockerignore

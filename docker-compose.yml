@@ -1,0 +1,52 @@
+# Nilai ${...} dibaca dari file .env di root proyek (otomatis oleh docker compose).
+# Jalankan: docker compose up -d --build
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-todolist}
+      POSTGRES_PASSWORD: ${DATABASE_PASS}
+      POSTGRES_DB: ${DATABASE_NAME:-todolist}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # One-off job: `prisma migrate deploy`, lalu selesai.
+  migrate:
+    build:
+      context: .
+      target: migrate
+    environment:
+      DATABASE_URL: postgresql://${DATABASE_USER:-todolist}:${DATABASE_PASS}@db:5432/${DB_NAME:-todolist}
+    depends_on:
+      db:
+        condition: service_healthy # tunggu Postgres siap menerima koneksi
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      target: runtime
+    image: todolist-nestjs:latest
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wajib diisi di .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-3600}
+    ports:
+      - '${PORT:-3001}:3000'
+    volumes:
+      - app-logs:/app/logs
+    restart: unless-stopped
+
+volumes:
+  pg-data:
+  app-logs:

@@ -6,7 +6,7 @@ A todo-list REST API built **to learn NestJS**. It's not production code. When y
 
 - NestJS 11 (Express), TypeScript (`module: nodenext`, `strictNullChecks` on, `noImplicitAny` off)
 - Prisma 7 with the new `prisma-client` generator and the SQLite **driver adapter** (`@prisma/adapter-better-sqlite3`)
-- Auth: `@nestjs/jwt` + `bcrypt`. There's no Passport; a hand-written guard handles auth.
+- Auth: `@nestjs/jwt` + `bcryptjs` (pure JS, so no native build). There's no Passport; a hand-written guard handles auth.
 - Validation: `class-validator` / `class-transformer` through a global `ValidationPipe`
 - Logging: `winston` + `winston-daily-rotate-file` through `nest-winston`, which replaces Nest's built-in logger app-wide
 - Jest for unit tests, `supertest` for e2e tests
