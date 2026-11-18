@@ -8,6 +8,6 @@ import { AuthModule } from '../auth/auth.module';
 @Module({
   imports: [PrismaModule, AuthModule],
   controllers: [FeedbackController],
-  providers: [FeedbackService, FeedbackRepo, PrismaModule],
+  providers: [FeedbackService, FeedbackRepo],
 })
 export class FeedbackModule {}
