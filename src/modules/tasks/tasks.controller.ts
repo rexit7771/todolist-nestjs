@@ -28,9 +28,12 @@ export class TasksController {
 
   @Get(':id')
   // * ParseIntPipe: mengubah string -> int, tolak non angka, menerima 0 kebawah
-  findById(@Param('id', ParseIntPipe) id: number) {
+  findById(
+    @CurrentUser('id') userId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     if (id <= 0) throw new BadRequestException('ID harus lebih dari 0');
-    return this.taskService.findById(Number(id));
+    return this.taskService.findById(id, userId);
   }
 
   @Post()
@@ -43,14 +46,18 @@ export class TasksController {
 
   @Patch(':id')
   update(
-    @Param('id', ParseIntPipe) id: string,
+    @CurrentUser('id') userId: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateTaskDto: UpdateTaskDto,
   ) {
-    return this.taskService.update(Number(id), updateTaskDto);
+    return this.taskService.update(Number(id), updateTaskDto, userId);
   }
 
   @Delete(':id')
-  delete(@Param('id', ParseIntPipe) id: string) {
-    return this.taskService.delete(Number(id));
+  delete(
+    @CurrentUser('id') userId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.taskService.delete(id, userId);
   }
 }

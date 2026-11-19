@@ -173,14 +173,13 @@ Setiap module fitur mengikuti pola **Controller → Service → Repository**:
 ## Langkah selanjutnya / TODO
 
 - [x] Hubungkan task ke user (relasi `Task.createdBy` → `User`, `GET /tasks` & `POST /tasks` memakai user yang login)
-- [ ] Cek kepemilikan task di `GET` / `PATCH` / `DELETE /tasks/:id` (saat ini user lain masih bisa akses task lewat id)
+- [x] Cek kepemilikan task di `GET` / `PATCH` / `DELETE /tasks/:id` (403 kalau task milik user lain)
 - [x] Sembunyikan hash password di response register (Prisma `omit` di `AuthRepo`)
 - [x] Custom decorator `@CurrentUser()`
 - [ ] Refactor DTO update dengan `PartialType`
 - [ ] Tulis unit test untuk service dan controller lainnya (auth, feedback)
 - [ ] Pakai Prisma migrations, bukan `db push`
 - [ ] Dokumentasi Swagger / OpenAPI
-- [ ] Error handler global seperti `app.use((err, req, res, next) => ...)` di Express, versi Nest-nya adalah **exception filter** (`@Catch()` + `ExceptionFilter`, didaftarkan dengan `app.useGlobalFilters()` atau `APP_FILTER`) untuk menyeragamkan format response error dan mencatat error ke winston
 
 ### Eksplorasi lanjutan: module & dependency injection
 
