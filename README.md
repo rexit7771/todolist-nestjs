@@ -7,7 +7,8 @@ REST API todo-list sederhana (ditambah modul feedback) yang saya buat untuk bela
 ## Tech stack
 
 - **NestJS 11** (Express) + TypeScript
-- **Prisma 7** + **SQLite** (melalui driver adapter `better-sqlite3`)
+- **Prisma 7** + **PostgreSQL** (melalui driver adapter `@prisma/adapter-pg`), dengan Prisma migrations
+- **Docker** + Docker Compose (Postgres, job migrasi, dan API)
 - Autentikasi **JWT** (`@nestjs/jwt`) dengan hashing password memakai **bcryptjs**
 - **class-validator** untuk validasi request
 - **winston** (melalui `nest-winston`) untuk logging ke konsol dan ke file log yang dirotasi harian
@@ -23,23 +24,45 @@ npm install
 
 ### 2. Buat file `.env`
 
+Salin [`env_template`](env_template) menjadi `.env`, lalu isi nilainya. Contoh:
+
 ```env
-DATABASE_URL="file:./dev.db"
-JWT_SECRET="change-me"
-JWT_EXPIRES_IN=3600   # dalam detik
 PORT=3001
+JWT_SECRET="change-me"
+JWT_EXPIRES_IN=3600   # dalam detik, bukan "1h"
+
+DATABASE_URL="postgresql://todolist:secret@localhost:5432/todolist"
+DATABASE_USER=todolist
+DATABASE_PASS=secret
+DATABASE_NAME=todolist
 ```
 
+`DATABASE_USER`, `DATABASE_PASS`, dan `DATABASE_NAME` hanya dipakai oleh `docker-compose.yml`. Aplikasi sendiri hanya membaca `DATABASE_URL`.
+
 ### 3. Siapkan database
+
+Kamu butuh PostgreSQL yang sedang berjalan. Cara paling mudah adalah menyalakan service `db` dari Docker Compose saja:
+
+```bash
+docker compose up -d db
+```
+
+> Service `db` di compose tidak mem-publish port ke host. Kalau ingin aplikasi lokal (di luar Docker) terhubung ke situ, tambahkan `ports: ['5432:5432']` pada service `db`, atau pakai PostgreSQL yang terinstal di komputermu.
 
 File config Prisma bernama `prisma7.config.ts`, jadi harus disebutkan secara eksplisit:
 
 ```bash
-npx prisma generate --config prisma7.config.ts   # generate Prisma client
-npx prisma db push  --config prisma7.config.ts   # buat/sinkronkan tabel di dev.db
+npx prisma generate       --config prisma7.config.ts   # generate Prisma client
+npx prisma migrate deploy --config prisma7.config.ts   # terapkan semua migration ke database
 ```
 
-Jalankan `prisma generate` lagi setiap kali kamu mengubah `prisma/schema.prisma`.
+Kalau kamu mengubah `prisma/schema.prisma`, buat migration baru lalu generate ulang client:
+
+```bash
+npx prisma migrate dev --name <nama_perubahan> --config prisma7.config.ts
+```
+
+(`migrate dev` sudah menjalankan `generate` secara otomatis.)
 
 > **Tips VS Code:** kalau ESLint menampilkan `Unsafe call of a type that could not be resolved` pada `this.prismaService.<model>` tepat setelah kamu menambah model, artinya server ESLint masih memakai cache tipe yang lama. Jalankan **ESLint: Restart ESLint Server** dari Command Palette.
 
@@ -52,6 +75,24 @@ npm run build && npm run start:prod
 ```
 
 API berjalan di `http://localhost:3001` (atau sesuai `PORT` yang kamu atur; default-nya 3000).
+
+## Menjalankan dengan Docker
+
+```bash
+docker compose up -d --build
+```
+
+Compose menjalankan tiga service secara berurutan:
+
+1. **`db`**: PostgreSQL 17. Service berikutnya menunggu sampai healthcheck `pg_isready` lulus.
+2. **`migrate`**: job sekali jalan yang menjalankan `prisma migrate deploy`, lalu berhenti.
+3. **`api`**: aplikasi NestJS (`node dist/src/main`), baru dimulai setelah migrasi sukses.
+
+Beberapa hal yang perlu diperhatikan:
+
+- Service `api` membaca `DATABASE_URL` dari `.env`. Saat berjalan di dalam compose, host-nya harus `db`, bukan `localhost`.
+- Port host `${PORT:-3001}` di-map ke port 3000 di dalam container. Karena `.env` juga dikirim ke container, `PORT` di `.env` ikut menentukan port yang dipakai aplikasi di dalam container, jadi pastikan keduanya cocok.
+- File log tersimpan di volume `app-logs`, dan data database di volume `pg-data`.
 
 ## Logging
 
@@ -86,11 +127,11 @@ Konfigurasinya ada di [`src/configs/logger/winston.config.ts`](src/configs/logge
 | --- | --- | --- | --- |
 | POST | `/auth/register` | – | `{ "email": "a@b.com", "password": "secret1" }` |
 | POST | `/auth/login` | – | `{ "email": "a@b.com", "password": "secret1" }` → mengembalikan JWT |
-| GET | `/tasks` | Bearer | – |
-| GET | `/tasks/:id` | Bearer | – |
+| GET | `/tasks` | Bearer | – (hanya task milik user yang login) |
+| GET | `/tasks/:id` | Bearer | – (404 kalau tidak ada, 403 kalau milik user lain) |
 | POST | `/tasks` | Bearer | `{ "title": "Belajar NestJS" }` |
-| PATCH | `/tasks/:id` | Bearer | `{ "completed": true, "title": "Belanja" }` (keduanya opsional) |
-| DELETE | `/tasks/:id` | Bearer | – |
+| PATCH | `/tasks/:id` | Bearer | `{ "completed": true, "title": "Belanja" }` (keduanya opsional, hanya pemilik) |
+| DELETE | `/tasks/:id` | Bearer | – (hanya pemilik) |
 | GET | `/feedback` | Bearer | – |
 | GET | `/feedback/:id` | Bearer | – |
 | POST | `/feedback` | Bearer | `{ "name": "Budi", "message": "Mantap", "rating": 5 }` |
@@ -125,14 +166,19 @@ src/
 │   └── logger/               # config winston
 └── modules/
     ├── auth/                 # register, login, JwtAuthGuard
+    │   ├── decorators/       # @CurrentUser()
     │   ├── dto/
     │   └── guards/
-    ├── tasks/                # CRUD task (diproteksi)
+    ├── tasks/                # CRUD task milik user yang login (diproteksi)
     │   └── dto/
     └── feedback/             # CRUD feedback (diproteksi)
         └── dto/
-prisma/schema.prisma          # model database (User, Task, Feedback)
+prisma/
+├── schema.prisma             # model database (User, Task, Feedback)
+└── migrations/               # riwayat migration
+docs/                         # catatan belajar per konsep NestJS
 api-docs/                     # collection API Bruno
+Dockerfile, docker-compose.yml
 ```
 
 Setiap module fitur mengikuti pola **Controller → Service → Repository**:
@@ -179,7 +225,9 @@ Setiap module fitur mengikuti pola **Controller → Service → Repository**:
 - [x] Refactor DTO update dengan `PartialType`
 - [ ] Terapkan `PickType` & `PartialType` di DTO update feedback: `rating` lewat `PickType` (tetap wajib), `message` lewat `PartialType` (jadi optional), digabung dengan `IntersectionType`
 - [ ] Tulis unit test untuk service dan controller lainnya (auth, feedback)
-- [ ] Pakai Prisma migrations, bukan `db push`
+- [x] Pindah dari SQLite ke PostgreSQL, dan pakai Prisma migrations, bukan `db push`
+- [x] Jalankan aplikasi dengan Docker Compose (Postgres + job migrasi + API)
+- [ ] Perbaiki unit test task setelah ada pengecekan pemilik, dan atasi Jest yang gagal memuat `@nestjs/mapped-types` (ESM)
 - [ ] Dokumentasi Swagger / OpenAPI
 
 ### Eksplorasi lanjutan: module & dependency injection
@@ -189,6 +237,10 @@ Setiap module fitur mengikuti pola **Controller → Service → Repository**:
 - [ ] **Lifecycle hooks**: `onModuleInit`, `onModuleDestroy`, `onApplicationBootstrap`, `enableShutdownHooks()` untuk menutup koneksi Prisma dengan rapi. Tambahkan `Logger` di setiap hook untuk melihat urutan eksekusinya
 - [ ] **Circular dependency**: buat skenario `TasksService` ↔ `FeedbackService`, lihat error-nya, perbaiki dengan `forwardRef()`, lalu bandingkan dengan solusi yang lebih baik (pisahkan logika bersama ke modul ketiga)
 - [ ] **Injection scope** (opsional): `Scope.DEFAULT` (singleton), `REQUEST`, `TRANSIENT`, dan bagaimana scope `REQUEST` "menular" ke provider yang bergantung padanya
+
+## Catatan belajar
+
+Penjelasan setiap konsep NestJS, dengan contoh dari kode di repo ini, ada di folder [`docs/`](docs/README.md).
 
 ## Referensi
 
