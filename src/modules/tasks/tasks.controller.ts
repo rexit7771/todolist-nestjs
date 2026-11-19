@@ -14,6 +14,7 @@ import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/currentUser.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -21,8 +22,8 @@ export class TasksController {
   constructor(private readonly taskService: TasksService) {}
 
   @Get()
-  findAll() {
-    return this.taskService.findAll();
+  findAll(@CurrentUser('id') userId: number) {
+    return this.taskService.findAll(userId);
   }
 
   @Get(':id')
@@ -33,8 +34,11 @@ export class TasksController {
   }
 
   @Post()
-  create(@Body() createTaskDto: CreateTaskDto) {
-    return this.taskService.create(createTaskDto);
+  create(
+    @CurrentUser('id') userId: number,
+    @Body() createTaskDto: CreateTaskDto,
+  ) {
+    return this.taskService.create(createTaskDto, userId);
   }
 
   @Patch(':id')

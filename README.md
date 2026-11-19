@@ -172,9 +172,10 @@ Setiap module fitur mengikuti pola **Controller → Service → Repository**:
 
 ## Langkah selanjutnya / TODO
 
-- [ ] Hubungkan task ke user (setiap user hanya melihat task miliknya)
+- [x] Hubungkan task ke user (relasi `Task.createdBy` → `User`, `GET /tasks` & `POST /tasks` memakai user yang login)
+- [ ] Cek kepemilikan task di `GET` / `PATCH` / `DELETE /tasks/:id` (saat ini user lain masih bisa akses task lewat id)
 - [x] Sembunyikan hash password di response register (Prisma `omit` di `AuthRepo`)
-- [ ] Custom decorator `@CurrentUser()`
+- [x] Custom decorator `@CurrentUser()`
 - [ ] Refactor DTO update dengan `PartialType`
 - [ ] Tulis unit test untuk service dan controller lainnya (auth, feedback)
 - [ ] Pakai Prisma migrations, bukan `db push`

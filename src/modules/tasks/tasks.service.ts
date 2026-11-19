@@ -7,8 +7,8 @@ import { TaskRepo } from './tasks.repo';
 export class TasksService {
   constructor(private readonly taskRepo: TaskRepo) {}
 
-  async findAll() {
-    return this.taskRepo.findAll();
+  async findAll(userId: number) {
+    return this.taskRepo.findAll(userId);
   }
 
   async findById(id: number) {
@@ -17,8 +17,8 @@ export class TasksService {
     return task;
   }
 
-  async create(createTaskDto: CreateTaskDto) {
-    return this.taskRepo.create(createTaskDto);
+  async create(createTaskDto: CreateTaskDto, createdBy: number) {
+    return this.taskRepo.create(createTaskDto, createdBy);
   }
 
   async update(id: number, updateTaskDto: UpdateTaskDto) {

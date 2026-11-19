@@ -7,8 +7,16 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 export class TaskRepo {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
-    return this.prisma.task.findMany();
+  async findAll(userId: number) {
+    return this.prisma.task.findMany({
+      where: { createdBy: userId },
+      omit: { createdBy: true },
+      include: {
+        creator: {
+          select: { id: true, email: true },
+        },
+      },
+    });
   }
 
   async findById(id: number) {
@@ -17,9 +25,9 @@ export class TaskRepo {
     });
   }
 
-  async create(dto: CreateTaskDto) {
+  async create(dto: CreateTaskDto, createdBy: number) {
     return this.prisma.task.create({
-      data: { title: dto.title },
+      data: { title: dto.title, createdBy },
     });
   }
 
