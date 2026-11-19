@@ -176,7 +176,8 @@ Setiap module fitur mengikuti pola **Controller → Service → Repository**:
 - [x] Cek kepemilikan task di `GET` / `PATCH` / `DELETE /tasks/:id` (403 kalau task milik user lain)
 - [x] Sembunyikan hash password di response register (Prisma `omit` di `AuthRepo`)
 - [x] Custom decorator `@CurrentUser()`
-- [ ] Refactor DTO update dengan `PartialType`
+- [x] Refactor DTO update dengan `PartialType`
+- [ ] Terapkan `PickType` & `PartialType` di DTO update feedback: `rating` lewat `PickType` (tetap wajib), `message` lewat `PartialType` (jadi optional), digabung dengan `IntersectionType`
 - [ ] Tulis unit test untuk service dan controller lainnya (auth, feedback)
 - [ ] Pakai Prisma migrations, bukan `db push`
 - [ ] Dokumentasi Swagger / OpenAPI

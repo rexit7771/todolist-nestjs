@@ -33,7 +33,7 @@ services:
     build:
       context: .
       target: runtime
-    image: todolist-nestjs:latest
+    image: todolist-nestjs:0.5.6
     depends_on:
       migrate:
         condition: service_completed_successfully
