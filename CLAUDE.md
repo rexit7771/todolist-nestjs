@@ -162,12 +162,12 @@ The global `ValidationPipe` uses `whitelist` + `forbidNonWhitelisted`, so any un
 
 These are useful next exercises. Don't treat them as surprises:
 
-- **Jest can't load `@nestjs/mapped-types` v12.** It's ESM-only, and Jest runs the specs as CommonJS, so any spec that imports `UpdateTaskDto` (e.g. `tasks.controller.spec.ts`) fails with "Must use import to load ES Module". The app itself runs, because Node 22+/24 can `require()` ESM. Fixes to explore: mock the DTO module in the spec, let `ts-jest` transform that package (`transformIgnorePatterns`), or pin `@nestjs/mapped-types` to v2.
+- **Jest can't load `@nestjs/mapped-types` v12 or `@nestjs/jwt` v12.** Both are ESM-only, and Jest runs the specs as CommonJS, so specs that import `UpdateTaskDto` (`tasks.controller.spec.ts`) or anything touching `JwtService`/`JwtAuthGuard` (`auth.controller`, `auth.service`, `feedback.controller` specs) fail with "Must use import to load ES Module". The app itself runs, because Node 22+/24 can `require()` ESM. Fixes to explore: `jest.mock()` the package in the spec, let `ts-jest` transform it (`transformIgnorePatterns`), pin older CJS versions, or run Jest in ESM mode. As of 2026-11-21, `npx jest` shows 5 of 8 suites failing.
 - **`tasks.service.spec.ts` passes by accident.** It still calls `service.update(1, dto)` without `userId`, and the mocked task has no `createdBy`. Both are `undefined`, so the ownership check passes. It should pass a `userId`, give the mock a `createdBy`, and add a 403 test.
 - **Other unit tests are scaffolds.** The remaining specs, including feedback's and auth's, are untouched Nest CLI scaffolds with no mocks for `FeedbackRepo`, `AuthRepo`, `JwtService`, or `PrismaService`, so they fail on DI resolution. `test/app.e2e-spec.ts` expects `GET /` → "Hello World!".
 - **Redundant ownership checks in `TasksService`.** `update` and `delete` re-check `task.createdBy !== userId` after `findById` already threw `ForbiddenException`, so those branches can never run.
 - **403 vs 404 for someone else's task.** Returning 403 tells the caller that the ID exists. A common alternative is to query with `where: { id, createdBy }` and return 404 either way. Worth discussing as a design choice.
-- **`dev.db` is still tracked in git** even though the app now uses PostgreSQL. It's a leftover from the SQLite era. The [README.md](README.md) also still describes SQLite, `file:./dev.db` and `db push`.
+- **`dev.db` is still tracked in git** even though the app now uses PostgreSQL. It's a leftover from the SQLite era.
 - `UpdateFeedback` (not named `UpdateFeedbackDto` like the other DTOs) reuses the message `'name wajib dikirim'` on the `message` field. `FeedbackDto` is unused now that the repo uses Prisma.
 - **`app.controller.ts` and `app.service.ts` are leftover scaffold.** `AppModule` doesn't register them.
 - `AppModule` imports a bare `JwtModule` that does nothing, because `AuthModule` already configures and exports it.
