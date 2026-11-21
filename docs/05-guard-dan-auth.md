@@ -73,7 +73,9 @@ JwtModule.registerAsync({
   useFactory: (config: ConfigService) => ({
     secret: config.getOrThrow<string>('JWT_SECRET'),
     signOptions: {
-      expiresIn: Number(config.getOrThrow<string>('JWT_EXPIRES_IN')),
+      expiresIn: parseExpiresIn(
+        config.getOrThrow<string>('JWT_EXPIRES_IN'),
+      ),
     },
   }),
 }),
@@ -82,6 +84,8 @@ JwtModule.registerAsync({
 - `JwtModule` adalah **dynamic module**: module yang bisa dikonfigurasi saat di-import. Versi `register({...})` menerima nilai langsung. Versi `registerAsync` menerima **factory** yang boleh meminta dependency lewat `inject`.
 - `registerAsync` dipakai di sini karena `JWT_SECRET` dibaca dari `ConfigService`, dan `ConfigService` baru bisa didapat lewat DI. Kalau ditulis `register({ secret: process.env.JWT_SECRET })`, ada risiko nilainya dibaca sebelum `.env` selesai dimuat.
 - `getOrThrow` membuat aplikasi **gagal start** kalau variabelnya tidak ada. Ini lebih baik daripada aplikasi jalan dengan secret `undefined`.
+- **`signOptions` bukan aturan Nest.** `JwtService` meneruskannya apa adanya ke library `jsonwebtoken`, jadi tipe dan arti `expiresIn` mengikuti `jsonwebtoken`: `number | StringValue`. `StringValue` adalah template literal type dari `@types/ms` (`"5h"`, `"7d"`, `"30 minutes"`).
+- **`parseExpiresIn()`** menerima dua format `JWT_EXPIRES_IN`. Kalau isinya angka saja (`3600`), nilainya diubah menjadi `number` dan dibaca sebagai **detik**. Kalau tidak (`5h`, `7d`), string-nya diteruskan dan diparse oleh `ms`. Angka tanpa satuan tidak boleh diteruskan sebagai string, karena `jsonwebtoken` membaca `"3600"` sebagai 3600 **milidetik**.
 - `JwtService` hasil konfigurasi ini dipakai di dua tempat: `AuthService` untuk **membuat** token (`signAsync`), dan `JwtAuthGuard` untuk **memverifikasi** token (`verifyAsync`).
 
 ---
@@ -249,7 +253,8 @@ creator   User @relation(fields: [createdBy], references: [id], onDelete: Cascad
 
 ## Jebakan yang saya temui
 
-- **`JWT_EXPIRES_IN` harus dalam detik.** Nilainya dibungkus `Number(...)`, jadi `"1h"` berubah menjadi `NaN`.
+- **`JWT_EXPIRES_IN` dulu hanya menerima detik.** Nilainya dibungkus `Number(...)`, jadi `"1h"` berubah menjadi `NaN`. Aplikasi tetap boot, tetapi `POST /auth/login` error 500 saat `sign()`, karena opsi baru divalidasi waktu token dibuat. `Number()` dipakai karena `getOrThrow<string>()` mengembalikan `string` biasa, dan `string` tidak bisa di-assign ke `StringValue`. Sekarang `parseExpiresIn()` menerima kedua format (lihat bagian 2).
+- **String angka tanpa satuan = milidetik.** Bagi `jsonwebtoken`, `3600` berarti 3600 detik, sedangkan `"3600"` berarti 3,6 detik.
 - **`@CurrentUser()` hanya berfungsi di route yang dijaga `JwtAuthGuard`.** Tanpa guard, `request.user` bernilai `undefined`, sehingga `user[data]` melempar `TypeError`, dan client menerima 500, bukan 401.
 - **Urutan eksekusi: middleware jalan sebelum guard.** Karena itu `HttpLoggerMiddleware` tetap mencatat request yang ditolak guard, dan request itu tercatat sebagai `warn ... 401`.
 - **Ada pengecekan pemilik yang tidak pernah berjalan.** `update` dan `delete` mengecek `task.createdBy !== userId` lagi, padahal `findById` sudah melempar 403 lebih dulu. Kodenya tidak salah, tapi tidak berguna.

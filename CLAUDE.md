@@ -51,7 +51,7 @@ The variable names are listed in [env_template](env_template). Don't read `.env`
 | `DATABASE_URL` | Prisma config + `PrismaService` adapter | a `postgresql://...` connection string. In compose, `.env.docker` can override it for the container |
 | `DATABASE_HOST` / `DATABASE_PORT` / `DATABASE_USER` / `DATABASE_PASS` / `DATABASE_NAME` | nothing | in the template but not read by code or compose (leftovers) |
 | `JWT_SECRET` | `AuthModule` (`getOrThrow`) | the app won't boot without it. Compose also refuses to start without it |
-| `JWT_EXPIRES_IN` | `AuthModule` | wrapped in `Number(...)`, so give **seconds** (e.g. `3600`), not `"1h"` |
+| `JWT_EXPIRES_IN` | `AuthModule` | `parseExpiresIn()` accepts digits only as **seconds** (`3600`) or an `ms` string (`5h`, `7d`). A digit-only value is converted to a number on purpose, because jsonwebtoken reads the string `"3600"` as milliseconds |
 | `PORT` | `main.ts`, compose host port | defaults to 3000; the Bruno env expects **3001** |
 
 ### Docker notes
