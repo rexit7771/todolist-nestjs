@@ -17,15 +17,15 @@ Urutannya kira-kira sama dengan urutan sebuah request diproses, dari module samp
 
 | # | Bab | Status |
 | --- | --- | --- |
-| 01 | Module & dependency injection | belum ditulis |
-| 02 | Controller → Service → Repo | belum ditulis |
-| 03 | DTO & `ValidationPipe` (termasuk `PartialType`) | belum ditulis |
-| 04 | Pipes (`ParseIntPipe`) | belum ditulis |
+| 01 | [Module & dependency injection](01-module-dan-di.md) | ✅ |
+| 02 | [Controller → Service → Repo](02-controller-service-repo.md) | ✅ |
+| 03 | [DTO & `ValidationPipe` (termasuk `PartialType`)](03-dto-dan-validation-pipe.md) | ✅ |
+| 04 | [Pipes (`ParseIntPipe`)](04-pipes.md) | ✅ |
 | 05 | [Guard, autentikasi & `@CurrentUser()`](05-guard-dan-auth.md) | ✅ |
-| 06 | Middleware (`HttpLoggerMiddleware`) | belum ditulis |
-| 07 | Prisma, migrations & PostgreSQL | belum ditulis |
-| 08 | Logging dengan winston | belum ditulis |
-| 09 | Unit testing dengan mock | belum ditulis |
+| 06 | [Middleware (`HttpLoggerMiddleware`)](06-middleware.md) | ✅ |
+| 07 | [Prisma, migrations & PostgreSQL](07-prisma.md) | ✅ |
+| 08 | [Logging dengan winston](08-logging.md) | ✅ |
+| 09 | [Unit testing dengan mock](09-unit-testing.md) | ✅ |
 | 10 | [Docker & Docker Compose](10-docker-dan-compose.md) | ✅ |
 
 ## Gambaran besar: perjalanan sebuah request
