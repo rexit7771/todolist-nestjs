@@ -1,52 +1,33 @@
-# Nilai ${...} dibaca dari file .env di root proyek (otomatis oleh docker compose).
-# Jalankan: docker compose up -d --build
+# Compose ini hanya menjalankan api. Database-nya server Postgres yang sudah ada
+# (tidak ikut di compose), dan migrasi dijalankan MANUAL dari laptop:
+#
+#   1. npx prisma migrate deploy --config prisma7.config.ts   # setiap ada migration baru
+#   2. docker compose up -d --build
+#
+# DATABASE_URL diambil dari .env, lalu (kalau ada) ditimpa oleh .env.docker.
+# Ingat: `localhost` di dalam container = container itu sendiri. Kalau Postgres
+# terpasang di laptop sendiri, .env tetap `localhost` (untuk start:dev & migrasi)
+# dan .env.docker berisi host.docker.internal. Contoh: env_docker_template.
 
 services:
-  db:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: ${DATABASE_USER:-todolist}
-      POSTGRES_PASSWORD: ${DATABASE_PASS}
-      POSTGRES_DB: ${DATABASE_NAME:-todolist}
-    volumes:
-      - pg-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
-  # One-off job: `prisma migrate deploy`, lalu selesai.
-  migrate:
-    build:
-      context: .
-      target: migrate
-    environment:
-      DATABASE_URL: postgresql://${DATABASE_USER:-todolist}:${DATABASE_PASS}@db:5432/${DB_NAME:-todolist}
-    depends_on:
-      db:
-        condition: service_healthy # tunggu Postgres siap menerima koneksi
-    restart: 'no'
-
-  api:
-    build:
-      context: .
-      target: runtime
+  app:
+    container_name: todolist-nestjs
     image: todolist-nestjs:0.5.6
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    env_file: .env
+    build: .
+    env_file:
+      - .env
+      - path: .env.docker # menimpa DATABASE_URL khusus container
+        required: false
     environment:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wajib diisi di .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-3600}
     ports:
       - '${PORT:-3001}:3000'
     volumes:
-      - app-logs:/app/logs
+      - ./logs:/app/logs
     restart: unless-stopped
-
-volumes:
-  pg-data:
-  app-logs:
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"

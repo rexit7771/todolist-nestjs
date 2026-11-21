@@ -10,7 +10,7 @@ A todo-list REST API built **to learn NestJS**. It's not production code. When y
 - Validation: `class-validator` / `class-transformer` through a global `ValidationPipe`. `@nestjs/mapped-types` (`PartialType`) for derived DTOs.
 - Logging: `winston` + `winston-daily-rotate-file` through `nest-winston`, which replaces Nest's built-in logger app-wide
 - Jest for unit tests, `supertest` for e2e tests
-- Docker: multi-stage [Dockerfile](Dockerfile) + [docker-compose.yml](docker-compose.yml) (Postgres 17, a one-off `migrate` job, the `api`)
+- Docker: a multi-stage [Dockerfile](Dockerfile) + [docker-compose.yml](docker-compose.yml), **for the `api` only**. The DB is external, and migrations are run manually from the host.
 - API requests live in a **Bruno** collection in [api-docs/todolist-netsjs/](api-docs/todolist-netsjs/). The Postman CLI is also installed.
 
 ## Commands
@@ -26,11 +26,12 @@ npm run test:e2e           # test/*.e2e-spec.ts
 # Prisma: the config file has a non-default name, so pass it explicitly
 npx prisma generate       --config prisma7.config.ts   # writes the client to ./generated/prisma (gitignored)
 npx prisma migrate dev    --config prisma7.config.ts   # create + apply a migration after editing schema.prisma
-npx prisma migrate deploy --config prisma7.config.ts   # apply existing migrations (what the Docker `migrate` job runs)
+npx prisma migrate deploy --config prisma7.config.ts   # apply existing migrations (run manually before `docker compose up`)
 npx prisma studio         --config prisma7.config.ts
 
 # Docker (reads ${...} from .env)
-docker compose up -d --build
+npx prisma migrate deploy --config prisma7.config.ts   # 1. migrate manually (host, .env)
+docker compose up -d --build                           # 2. api only (.env + optional .env.docker)
 ```
 
 **The build output is `dist/src/main.js`, not `dist/main.js`.** `PrismaService` imports from `generated/prisma`, which is outside `src/`, so `tsc` uses the project root as `rootDir`. `start:prod` therefore runs `node dist/src/main`. `prisma7.config.ts` is excluded in `tsconfig.build.json` because the CLI uses it only at dev time.
@@ -47,17 +48,19 @@ The variable names are listed in [env_template](env_template). Don't read `.env`
 
 | Var | Used by | Notes |
 | --- | --- | --- |
-| `DATABASE_URL` | Prisma config + `PrismaService` adapter | a `postgresql://...` connection string |
-| `DATABASE_USER` / `DATABASE_PASS` / `DATABASE_NAME` | `docker-compose.yml` only | build the Postgres container and the `migrate` job's URL. `DATABASE_HOST` / `DATABASE_PORT` are in the template but not read by code |
+| `DATABASE_URL` | Prisma config + `PrismaService` adapter | a `postgresql://...` connection string. In compose, `.env.docker` can override it for the container |
+| `DATABASE_HOST` / `DATABASE_PORT` / `DATABASE_USER` / `DATABASE_PASS` / `DATABASE_NAME` | nothing | in the template but not read by code or compose (leftovers) |
 | `JWT_SECRET` | `AuthModule` (`getOrThrow`) | the app won't boot without it. Compose also refuses to start without it |
 | `JWT_EXPIRES_IN` | `AuthModule` | wrapped in `Number(...)`, so give **seconds** (e.g. `3600`), not `"1h"` |
 | `PORT` | `main.ts`, compose host port | defaults to 3000; the Bruno env expects **3001** |
 
 ### Docker notes
 
-- Stages: `deps` → `build` (runs `prisma generate` + `nest build`) → `migrate` (adds `openssl` for the Prisma schema engine on Alpine, runs `migrate deploy`) and `prod-deps` → `runtime` (`node dist/src/main` as user `node`).
-- Compose order: `db` (healthcheck `pg_isready`) → `migrate` (`service_completed_successfully`) → `api`. Logs live in the `app-logs` volume.
-- The `migrate` service builds its own `DATABASE_URL` with host `db`. The `api` service does **not**; it takes `DATABASE_URL` from `env_file: .env`, so that value has to point at host `db` when the app runs in compose (not `localhost`).
+- **Docker is for the `api` only.** There's no DB container and no migrate job/stage; this was a deliberate user decision. Migrations are **always manual** from the host: `npx prisma migrate deploy --config prisma7.config.ts` (using `.env`) before `docker compose up`. Don't re-add a `migrate` stage/service or a `db` service unless asked. A Prisma CLI image is ~625 MB at best.
+- Stages: `deps` → `build` (runs `prisma generate` + `nest build`), `deps` → `prod-deps` → `runtime` (`node dist/src/main` as user `node`).
+- `prod-deps` explicitly runs `npm uninstall prisma typescript` after `npm prune --omit=dev`. `@prisma/client` lists both as optional peers, so `--omit=dev` keeps them (~250 MB of CLI/Studio/PGlite). Don't remove that step; the runtime only needs `@prisma/client` + `@prisma/adapter-pg`.
+- The DB is external (currently a Postgres running natively on the user's Windows machine). Its location is a runtime concern (`DATABASE_URL`), never baked into the image. `api` uses `env_file: [.env, {path: .env.docker, required: false}]`, and the later file wins. `.env.docker` (gitignored, example in [env_docker_template](env_docker_template)) holds only a container-side `DATABASE_URL`. It's needed because the user's Postgres runs natively on Windows. `localhost` inside a container is the container itself. `host.docker.internal` works from containers (it arrives as `192.168.65.x`), but from Windows it resolves to the LAN IP (`10.0.0.39`), which `pg_hba.conf` rejects. So `.env` keeps `localhost` for `start:dev`.
+- Logs live in the `app-logs` volume.
 - `api` maps `${PORT:-3001}:3000`, but `env_file: .env` also passes `PORT` into the container, which overrides the image's `PORT=3000`. If `.env` sets `PORT=3001`, the app listens on 3001 inside the container and the mapping to 3000 misses it.
 
 ## Architecture
@@ -164,7 +167,6 @@ These are useful next exercises. Don't treat them as surprises:
 - **Other unit tests are scaffolds.** The remaining specs, including feedback's and auth's, are untouched Nest CLI scaffolds with no mocks for `FeedbackRepo`, `AuthRepo`, `JwtService`, or `PrismaService`, so they fail on DI resolution. `test/app.e2e-spec.ts` expects `GET /` → "Hello World!".
 - **Redundant ownership checks in `TasksService`.** `update` and `delete` re-check `task.createdBy !== userId` after `findById` already threw `ForbiddenException`, so those branches can never run.
 - **403 vs 404 for someone else's task.** Returning 403 tells the caller that the ID exists. A common alternative is to query with `where: { id, createdBy }` and return 404 either way. Worth discussing as a design choice.
-- **`docker-compose.yml` uses `${DB_NAME:-todolist}` in the `migrate` URL** but `${DATABASE_NAME:-todolist}` for the `db` service. If `DATABASE_NAME` is set to something other than `todolist`, migrations run against a database that doesn't exist.
 - **`dev.db` is still tracked in git** even though the app now uses PostgreSQL. It's a leftover from the SQLite era. The [README.md](README.md) also still describes SQLite, `file:./dev.db` and `db push`.
 - `UpdateFeedback` (not named `UpdateFeedbackDto` like the other DTOs) reuses the message `'name wajib dikirim'` on the `message` field. `FeedbackDto` is unused now that the repo uses Prisma.
 - **`app.controller.ts` and `app.service.ts` are leftover scaffold.** `AppModule` doesn't register them.

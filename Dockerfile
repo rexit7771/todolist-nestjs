@@ -16,16 +16,17 @@ COPY . .
 RUN npx prisma generate --config prisma7.config.ts
 RUN npm run build
 
-# ---------- migrate: terapkan file di prisma/migrations ke Postgres ----------
-FROM build AS migrate
-# Prisma CLI (schema engine) butuh openssl, yang tidak ada di Alpine secara default
-RUN apk add --no-cache openssl
-USER node
-CMD ["npx", "prisma", "migrate", "deploy", "--config", "prisma7.config.ts"]
+# Image ini KHUSUS untuk api. Migrasi database dijalankan manual dari laptop:
+#   npx prisma migrate deploy --config prisma7.config.ts
 
 # ---------- prod-deps ----------
 FROM deps AS prod-deps
-RUN npm prune --omit=dev
+# @prisma/client punya peerOptional ke `prisma` & `typescript`, jadi `--omit=dev`
+# tetap menyimpannya (~250 MB: CLI, Studio, PGlite, ...). Buang manual: Prisma CLI
+# hanya dibutuhkan stage migrate. Prune kedua membersihkan typescript yang tersisa.
+RUN npm prune --omit=dev \
+  && npm uninstall prisma typescript --omit=dev --ignore-scripts --no-audit --no-fund \
+  && npm prune --omit=dev
 
 # ---------- runtime ----------
 FROM base AS runtime

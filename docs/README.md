@@ -26,7 +26,7 @@ Urutannya kira-kira sama dengan urutan sebuah request diproses, dari module samp
 | 07 | Prisma, migrations & PostgreSQL | belum ditulis |
 | 08 | Logging dengan winston | belum ditulis |
 | 09 | Unit testing dengan mock | belum ditulis |
-| 10 | Docker & Docker Compose | belum ditulis |
+| 10 | [Docker & Docker Compose](10-docker-dan-compose.md) | ✅ |
 
 ## Gambaran besar: perjalanan sebuah request
 

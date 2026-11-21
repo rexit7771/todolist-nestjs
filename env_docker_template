@@ -1,0 +1,7 @@
+# Salin ke .env.docker (gitignored). Opsional: hanya dibaca container `api`
+# (docker-compose.yml), dan nilainya MENIMPA yang ada di .env.
+# Migrasi manual (npx prisma migrate deploy) tetap memakai .env biasa.
+#
+# Kenapa perlu? `localhost` di dalam container = container itu sendiri.
+# Postgres yang terpasang di laptop sendiri → pakai host.docker.internal.
+DATABASE_URL=postgresql://USER:PASS@host.docker.internal:5432/DBNAME
